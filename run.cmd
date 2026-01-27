@@ -1,0 +1,1 @@
+g++ main.cpp ast.cpp Parser.cpp Lexer.cpp codegen.cpp -o main.exe && main.exe test.az
