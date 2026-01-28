@@ -1,1 +1,12 @@
-g++ main.cpp ast.cpp Parser.cpp Lexer.cpp asmgen.cpp -o main && ./main test.az  && nasm -f elf64 azc.asm -o azc.o && gcc -no-pie azc.o -o azc && rm azc.o && rm azc.asm && rm main
+#!/bin/bash
+set -e
+
+g++ -std=c++17 \
+    main.cpp \
+    ast.cpp \
+    Parser.cpp \
+    Lexer.cpp \
+    asmgen.cpp \
+    -o azc
+
+echo "[OK] azc built"

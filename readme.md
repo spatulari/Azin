@@ -64,11 +64,13 @@ This install the dependencies.
 
 Run this from the project root to build the compiler (or download a precompiled binary from the Releases page):
 ```
-./build.sh
+./build.sh 
 ```
 
-To compile a .az file, run:
+Now, you have 'azc'. To use it, you run:
 ```
-./azc file.az
+./azc yourfile.az
 ```
+
+Note: there is no system wide compiler or stuff like that, later on it will.
 

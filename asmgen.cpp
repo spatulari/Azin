@@ -4,7 +4,7 @@
 #include <string>
 #include <fstream>
 
-static std::ofstream azc;
+static std::ofstream out;
 
 static void gen_stmt(Stmt* s);
 static void gen_expr(Expr* e);
@@ -26,7 +26,7 @@ static int stack_offset = 0;
 
 static void emit(const std::string& s)
 {
-    azc << s << "\n";
+    out << s << "\n";
 }
 
 static void emit_body(const std::string& s)
@@ -34,11 +34,11 @@ static void emit_body(const std::string& s)
     body.push_back(s);
 }
 
-void gen_program(const std::vector<Stmt*>& program)
+void gen_program(const std::vector<Stmt*>& program, const std::string& out_name)
 {
-    azc.open("azc.asm");
-    if (!azc)
-        throw std::runtime_error("failed to open azc.asm");
+    out.open(out_name);
+    if (!out)
+        throw std::runtime_error("failed to open out.asm");
 
     body.clear();
     vars.clear();
@@ -67,7 +67,7 @@ void gen_program(const std::vector<Stmt*>& program)
         emit("    sub rsp, " + std::to_string(aligned));
 
     for (auto& line : body)
-        azc << line << "\n";
+        out << line << "\n";
 
     emit("    mov rsp, rbp");
     emit("    pop rbp");
@@ -75,7 +75,7 @@ void gen_program(const std::vector<Stmt*>& program)
     emit("    ret");
     emit("section .note.GNU-stack noalloc noexec nowrite progbits");
 
-    azc.close();
+    out.close();
 }
 
 
