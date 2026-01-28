@@ -69,6 +69,6 @@ Run this from the project root to build the compiler (or download a precompiled 
 
 To compile a .az file, run:
 ```
-./out file.az
+./azc file.az
 ```
 
