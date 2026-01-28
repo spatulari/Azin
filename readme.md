@@ -42,7 +42,7 @@ The compiler is implemented in modern C++ and follows a modular architecture, se
 int x = 5;
 out@io(x);
 ```
-This prints the variable x, variable decleration is like C++, it has only int data type for now, and now int main().
+This prints the variable x, variable decleration is like C++, it has only int data type for now, and no int main() yet.
 It can also print Hello World
 
 ```
@@ -59,7 +59,7 @@ Debian/Ubuntu:
 ```
 sudo apt install g++ nasm gcc
 ```
-This install the dependencies.
+This installs the dependencies.
 
 
 Run this from the project root to build the compiler (or download a precompiled binary from the Releases page):
