@@ -24,6 +24,18 @@ static int align16(int n)
 static std::unordered_map<std::string, AsmVar> vars;
 static int stack_offset = 0;
 
+static int string_id = 0;
+static std::vector<std::string> data_strings;
+
+static std::string emit_string(const std::string& s)
+{
+    std::string label = "str_" + std::to_string(string_id++);
+    data_strings.push_back(
+        label + " db \"" + s + "\", 10, 0"
+    );
+    return label;
+}
+
 static void emit(const std::string& s)
 {
     out << s << "\n";
@@ -36,6 +48,9 @@ static void emit_body(const std::string& s)
 
 void gen_program(const std::vector<Stmt*>& program, const std::string& out_name)
 {
+    data_strings.clear();
+    string_id = 0;
+
     out.open(out_name);
     if (!out)
         throw std::runtime_error("failed to open out.asm");
@@ -57,6 +72,10 @@ void gen_program(const std::vector<Stmt*>& program, const std::string& out_name)
     emit("");
     emit("section .data");
     emit("fmt_int db \"%ld\", 10, 0");
+    emit("fmt_str db \"%s\", 0");
+
+    for (auto& s : data_strings)
+        emit(s);
     emit("");
     emit("section .text");
     emit("main:");
@@ -97,14 +116,35 @@ static void gen_expr(Expr* e)
                   std::to_string(it->second.offset) + "]");
         return;
     }
+    if (e->type == EXPR_STRING)
+    {
+        std::string label = emit_string(e->string_value);
+        emit_body("    lea rax, [rel " + label + "]");
+        return;
+    }
+
 
     if (e->type == EXPR_CALL)
     {
         if (e->func_name == "out" && e->module_name == "io")
         {
             gen_expr(e->arg);
-            emit_body("    mov rsi, rax");
-            emit_body("    lea rdi, [rel fmt_int]");
+
+            if (e->arg->type == EXPR_INT || e->arg->type == EXPR_VAR)
+            {
+                emit_body("    mov rsi, rax");
+                emit_body("    lea rdi, [rel fmt_int]");
+            }
+            else if (e->arg->type == EXPR_STRING)
+            {
+                emit_body("    mov rsi, rax");
+                emit_body("    lea rdi, [rel fmt_str]");
+            }
+            else
+            {
+                throw std::runtime_error("unsupported print argument");
+            }
+
             emit_body("    xor eax, eax");
             emit_body("    call printf");
             return;
