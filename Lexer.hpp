@@ -11,11 +11,13 @@ enum TokenType
     TOK_RETURN,
     TOK_FN,
     TOK_NORE,
+    TOK_BOOL,
 
     // Identifiers & literals
     TOK_IDENT,
     TOK_INT_LIT,
     TOK_STRING_LIT,
+    TOK_BOOL_LIT,
 
     // Symbols
     TOK_LPAREN,    // (

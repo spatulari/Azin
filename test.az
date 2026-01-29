@@ -1,3 +1,2 @@
-int x = 4;
-
-out@io(x);  // comment
+bool x = 56;
+out@io(x);

@@ -7,7 +7,8 @@ enum ExprType
     EXPR_INT,
     EXPR_STRING,
     EXPR_CALL,
-    EXPR_VAR
+    EXPR_VAR,
+    EXPR_BOOL
 };
 
 struct Expr
@@ -15,6 +16,7 @@ struct Expr
     ExprType type;
     int int_value;
     std::string string_value;
+    bool bool_value;
 
     // call
     std::string func_name;   // "out"
@@ -34,6 +36,12 @@ enum StmtType
     STMT_DECL
 };
 
+enum VarType 
+{
+    TYPE_INT,
+    TYPE_BOOL
+};
+
 struct Stmt
 {
     StmtType type;
@@ -41,6 +49,7 @@ struct Stmt
 
     // variable
     std::string var_name;
+    VarType var_type;
 };
 
 void print_stmt(Stmt* s);

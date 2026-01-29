@@ -9,6 +9,8 @@
 #include <string>
 #include <cstdlib>   // system()
 
+bool debug = false;
+
 int main(int argc, char** argv)
 {
     if (argc < 2)
@@ -16,6 +18,8 @@ int main(int argc, char** argv)
         std::cerr << "Usage: azc <file.az>\n";
         return 1;
     }
+    //FIXME: Debug mode doesnt get triggered for some reason
+    if (argv[2] == "-d") {debug = true; std::cout << "DEBUG MODE"; }
 
     std::string input = argv[1];
 
@@ -27,7 +31,6 @@ int main(int argc, char** argv)
 
     std::string base = input.substr(0, input.size() - 3);
 
-    // ===== read source =====
     std::ifstream file(input);
     if (!file)
     {
@@ -45,28 +48,43 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // ===== compile =====
+
+    std::ofstream dlog("debug.log");    // dlog = debug log
+    if (!dlog)
+    {
+        std::cerr << "Error: could not open debug.log";
+    }
+
+
     Lexer lexer(src);
     auto tokens = lexer.tokenize();
+
+    if (debug)
+    {
+        for (const auto& token : tokens)
+        {
+            dlog << token.type << " : " << token.value << '\n';
+        }
+    }
+
 
     Parser parser = make_parser(tokens);
     auto program = parse_program(parser);
 
-    gen_program(program, base + ".asm"); // emits base.asm (you already do this)
+    gen_program(program, base + ".asm"); // emits base.asm 
 
-    // ===== assemble =====
     std::string cmd =
         "nasm -f elf64 " + base + ".asm -o " + base + ".o && "
         "gcc -no-pie " + base + ".o -o " + base;
 
     int ret = system(cmd.c_str());
+
     if (ret != 0)
     {
         std::cerr << "Error: assembling or linking failed\n";
         return 1;
     }
 
-    // ===== cleanup =====
     std::remove((base + ".o").c_str());
     std::remove((base + ".asm").c_str());
 

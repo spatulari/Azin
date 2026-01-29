@@ -86,6 +86,18 @@ std::vector<Token> Lexer::tokenize()
             {
                 tokens.push_back({TOK_RETURN, c_final});
             }
+            else if (c_final == "bool")
+            {
+                tokens.push_back({TOK_BOOL, c_final});
+            }
+            else if (c_final == "true")
+            {
+                tokens.push_back({TOK_BOOL_LIT, "1"});
+            }
+            else if (c_final == "false")
+            {
+                tokens.push_back({TOK_BOOL_LIT, "0"});
+            }
             else
             {
                 tokens.push_back({TOK_IDENT, c_final});

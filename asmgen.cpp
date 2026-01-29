@@ -13,7 +13,8 @@ static std::vector<std::string> body;
 
 struct AsmVar
 {
-    int offset; // rbp-relative
+    int offset;
+    VarType type;
 };
 
 static int align16(int n)
@@ -122,6 +123,13 @@ static void gen_expr(Expr* e)
         emit_body("    lea rax, [rel " + label + "]");
         return;
     }
+    if (e->type == EXPR_BOOL)
+    {
+        emit_body(
+            "    mov rax, " + std::to_string(e->bool_value ? 1 : 0)
+        );
+        return;
+    }
 
 
     if (e->type == EXPR_CALL)
@@ -130,10 +138,18 @@ static void gen_expr(Expr* e)
         {
             gen_expr(e->arg);
 
-            if (e->arg->type == EXPR_INT || e->arg->type == EXPR_VAR)
+            if (e->arg->type == EXPR_VAR)
             {
+                auto it = vars.find(e->arg->var_name);
+                if (it == vars.end())
+                    throw std::runtime_error("undeclared variable");
+
                 emit_body("    mov rsi, rax");
-                emit_body("    lea rdi, [rel fmt_int]");
+
+                if (it->second.type == TYPE_BOOL)
+                    emit_body("    lea rdi, [rel fmt_int]");
+                else
+                    emit_body("    lea rdi, [rel fmt_int]");
             }
             else if (e->arg->type == EXPR_STRING)
             {
@@ -160,9 +176,17 @@ static void gen_stmt(Stmt* s)
     if (s->type == STMT_DECL)
     {
         stack_offset += 8;
-        vars[s->var_name] = { stack_offset };
+        vars[s->var_name] = { stack_offset, s->var_type };
+
 
         gen_expr(s->value);
+        if (s->var_type == TYPE_BOOL)
+        {
+            emit_body("    cmp rax, 0");
+            emit_body("    setne al");
+            emit_body("    movzx rax, al");
+        }
+
         emit_body("    mov QWORD [rbp-" +
                   std::to_string(stack_offset) + "], rax");
         return;

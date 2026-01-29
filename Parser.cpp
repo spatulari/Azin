@@ -1,5 +1,9 @@
 #include "parser.hpp"
 #include <stdexcept>
+#include <unordered_map>
+
+
+static std::unordered_map<std::string, VarType> symbol_table;
 
 Parser make_parser(const std::vector<Token>& tokens)
 {
@@ -28,6 +32,10 @@ Stmt* parse_statement(Parser& p)
     {
         advance(p); // consume 'return'
         Expr* value = parse_expression(p);
+        if (t.type == TOK_INT && value->type == EXPR_BOOL)
+            throw std::runtime_error(
+                "cannot assign bool to int"
+            );
 
         if (peek(p).type != TOK_SEMI)
             throw std::runtime_error("expected ';' after return");
@@ -63,7 +71,55 @@ Stmt* parse_statement(Parser& p)
         Stmt* s = new Stmt; 
         s->type = STMT_DECL;
         s->var_name = name;
+        if (symbol_table.find(name) != symbol_table.end())
+        {
+            throw std::runtime_error(
+                "variable '" + name + "' already declared"
+            );
+        }
         s->value = value;
+        symbol_table[name] = TYPE_INT;
+        s->var_type = TYPE_INT;
+        return s;
+    }
+    if (t.type == TOK_BOOL)
+    {
+        advance(p); // consume 'bool'
+
+        if (peek(p).type != TOK_IDENT)
+            throw std::runtime_error("expected variable name after 'bool'");
+
+        std::string name = advance(p).value;
+        
+        if (peek(p).type != TOK_EQUAL)
+            throw std::runtime_error("expected '=' after variable name");
+
+        advance(p); // consume '='
+
+        Expr* value = parse_expression(p);
+
+        if (peek(p).type != TOK_SEMI)
+            throw std::runtime_error("expected ';' after declaration");
+
+        advance(p); // consume ';'
+
+        Stmt* s = new Stmt;
+        s->type = STMT_DECL;
+        s->var_name = name;
+        s->value = value;
+        if (symbol_table.find(name) != symbol_table.end())
+        {
+            throw std::runtime_error(
+                "variable '" + name + "' already declared"
+            );
+        }
+        symbol_table[name] = TYPE_BOOL;
+        s->var_type = TYPE_BOOL;
+        if (value->type != EXPR_BOOL)
+        {
+            throw std::runtime_error("cannot assign non-bool to bool");
+        }
+
         return s;
     }
     // variable assign
@@ -89,7 +145,6 @@ Stmt* parse_statement(Parser& p)
         return s;
     }
 
-    // ----- expression statement -----
     Expr* e = parse_expression(p);
 
     if (peek(p).type != TOK_SEMI)
@@ -125,6 +180,16 @@ Expr* parse_expression(Parser& p)
         Expr* e = new Expr;
         e->type = EXPR_STRING;
         e->string_value = t.value;
+        return e;
+    }
+
+    if (t.type == TOK_BOOL_LIT)
+    {
+        advance(p);
+
+        Expr* e = new Expr;
+        e->type = EXPR_BOOL;
+        e->bool_value = (t.value == "1");
         return e;
     }
 
@@ -176,6 +241,7 @@ Expr* parse_expression(Parser& p)
 std::vector<Stmt*> parse_program(Parser& p)
 {
     std::vector<Stmt*> stmts;
+    symbol_table.clear();
 
     while (true)
     {

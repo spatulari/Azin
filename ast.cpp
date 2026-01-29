@@ -32,6 +32,14 @@ void print_expr(Expr* e, int indent)
         print_expr(e->arg, indent + 1);
         return;
     }
+    
+    if (e->type == EXPR_BOOL)
+    {
+        std::cout << "BoolLiteral("
+                << (e->bool_value ? "true" : "false")
+                << ")\n";
+        return;
+    }
 }
 
 void print_stmt(Stmt* s)
