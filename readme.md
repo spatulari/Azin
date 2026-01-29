@@ -33,6 +33,10 @@ The compiler is implemented in modern C++ and follows a modular architecture, se
 - Basic code generation
 - Modular and readable C++ codebase
 - Simple command-line usage
+- string printing
+- int and bool variables
+- variable printing
+- basic errors on variables (e.g. bool x = 56; -> cant assign non-bool to bool)
 
 ---
 
@@ -42,8 +46,8 @@ The compiler is implemented in modern C++ and follows a modular architecture, se
 int x = 5;
 out@io(x);
 ```
-This prints the variable x, variable decleration is like C++, it has only int data type for now, and no int main() yet.
-It can also print Hello World
+This prints the variable x, variable decleration is like C++, it has only int and bool data types for now, and no int main() yet.
+It can also print strings
 
 ```
 out@io("Hello World");
@@ -53,7 +57,7 @@ out@io("Hello World");
 
 ### VSCode extension 
 
-I have made a [VSCode extension](https://github.com/Alex12-Git200/Azin-Language-Support-VSCode) for syntax highlighting
+I have made a [VSCode extension](https://github.com/Alex12-Git200/Azin-Language-Support-VSCode) for syntax highlighting (soon intellisense)
 
 ---
 

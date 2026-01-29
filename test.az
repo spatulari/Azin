@@ -1,2 +1,2 @@
-bool x = 56;
+
 out@io(x);
