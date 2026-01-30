@@ -1,4 +1,11 @@
 !use <io>
 
-out@io("Hello World");
-return 0;
+char* msg = "Hello";
+int x = 5;
+int y = 5 + 4;
+
+int main()
+{
+    out@io(y);
+    return 0;
+}

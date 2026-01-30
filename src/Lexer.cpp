@@ -98,6 +98,14 @@ std::vector<Token> Lexer::tokenize()
             {
                 tokens.push_back({TOK_BOOL_LIT, "0"});
             }
+            else if (c_final == "char")
+            {
+                tokens.push_back({TOK_CHAR, c_final});
+            }
+            else if (c_final == "nore")
+            {
+                tokens.push_back({TOK_NORE, c_final});
+            }
             else
             {
                 tokens.push_back({TOK_IDENT, c_final});
@@ -114,6 +122,11 @@ std::vector<Token> Lexer::tokenize()
         else if (c == '>') {tokens.push_back({TOK_GT, std::string(1, c)}); advance();}
         else if (c == '@') {tokens.push_back({TOK_AT, std::string(1, c)}); advance();}
         else if (c == '=') {tokens.push_back({TOK_EQUAL, std::string(1, c)}); advance();}
+        else if (c == '*') {tokens.push_back({TOK_STAR, std::string(1, c)}); advance();}
+        else if (c == '+') {tokens.push_back({TOK_PLUS, "+"}); advance();}
+        else if (c == '-') {tokens.push_back({TOK_MINUS, "-"}); advance();}
+        else if (c == '*') {tokens.push_back({TOK_STAR_OP, "*"}); advance();}
+        else if (c == '/') {tokens.push_back({TOK_SLASH, "/"}); advance();}
         else if (c == '"')
         {
             std::vector<char> slt;  // stands for str_lit_tmp 
@@ -126,6 +139,19 @@ std::vector<Token> Lexer::tokenize()
             advance();
             std::string slt_final(slt.begin(), slt.end());
             tokens.push_back({TOK_STRING_LIT, slt_final});
+        }
+        else if (c == '\'')
+        {
+            advance(); // consume '
+
+            char value = advance();
+
+            if (peek() != '\'')
+                throw std::runtime_error("unterminated char literal");
+
+            advance(); // consume closing '
+
+            tokens.push_back({TOK_CHAR_LIT, std::string(1, value)});
         }
         else
         {

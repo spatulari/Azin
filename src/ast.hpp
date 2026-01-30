@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include <string>
+#include <vector>
 
 enum ExprType
 {
@@ -8,7 +9,18 @@ enum ExprType
     EXPR_STRING,
     EXPR_CALL,
     EXPR_VAR,
-    EXPR_BOOL
+    EXPR_BOOL,
+    EXPR_CHAR,
+    EXPR_BINOP
+};
+
+
+enum BinOp
+{
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV
 };
 
 struct Expr
@@ -17,6 +29,8 @@ struct Expr
     int int_value;
     std::string string_value;
     bool bool_value;
+    char char_value;
+
 
     // call
     std::string func_name;   // "out"
@@ -25,6 +39,11 @@ struct Expr
     
     // var
     std::string var_name;
+
+    // binary op
+    BinOp op;
+    Expr* left;
+    Expr* right;
 
 };
 
@@ -41,7 +60,10 @@ enum StmtType
 enum VarType 
 {
     TYPE_INT,
-    TYPE_BOOL
+    TYPE_BOOL,
+    TYPE_CHAR_PTR,
+    TYPE_CHAR,
+    TYPE_NORE
 };
 
 struct Stmt
@@ -55,6 +77,15 @@ struct Stmt
 
     std::string module_name;
 };
+
+struct Function
+{
+    std::string name;
+    VarType return_type;   // TYPE_INT or TYPE_NORE
+    std::vector<Stmt*> globals;   // top-level
+    std::vector<Stmt*> body; 
+};
+
 
 void print_stmt(Stmt* s);
 void print_expr(Expr* e, int indent);

@@ -3,6 +3,7 @@
 #include "Lexer.hpp"
 #include "ast.hpp"
 
+struct Function;
 struct Parser
 {
     const std::vector<Token>* tokens;
@@ -13,4 +14,4 @@ Parser make_parser(const std::vector<Token>& tokens);
 
 Stmt* parse_statement(Parser& p);
 Expr* parse_expression(Parser& p);
-std::vector<Stmt*> parse_program(Parser& p);
+Function* parse_program(Parser& p);

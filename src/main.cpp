@@ -1,3 +1,5 @@
+// LOC ~= 1374
+
 #include "asmgen.hpp"
 #include "Lexer.hpp"
 #include "Parser.hpp"
@@ -90,16 +92,17 @@ int main(int argc, char** argv)
     }
 
     Parser parser = make_parser(tokens);
-    auto program = parse_program(parser);
+    Function* fn = parse_program(parser);
+
 
     if (debug)
     {
         dlog << "Parsed AST:\n";
-        dlog << "Number of statements: " << program.size() << "\n";
-        for (size_t i = 0; i < program.size(); ++i)
+        dlog << "Number of statements: " << fn->body.size() << "\n";
+        for (size_t i = 0; i < fn->body.size(); ++i)
         {
             dlog << "Statement " << i << ": ";
-            Stmt* s = program[i];
+            Stmt* s = fn->body[i];
             if (s->type == STMT_RETURN) dlog << "RETURN\n";
             else if (s->type == STMT_EXPR) dlog << "EXPR\n";
             else if (s->type == STMT_ASSIGN) dlog << "ASSIGN to " << s->var_name << "\n";
@@ -110,7 +113,7 @@ int main(int argc, char** argv)
         dlog << "\n";
     }
 
-    gen_program(program, base + ".asm"); // emits base.asm 
+    gen_program(fn, base + ".asm");
 
     if (debug)
     {
