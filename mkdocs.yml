@@ -1,0 +1,32 @@
+site_name: Azin Documentation
+
+nav:
+  - Home: index.md
+  - Install: install.md
+  - Change Log: changelog.md
+
+theme:
+  name: material
+  logo: assets/logo.png
+  palette:
+    - scheme: default
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    - scheme: slate
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+  features:
+    - search.highlight
+    - search.share
+    - search.suggest
+
+plugins:
+  - search
