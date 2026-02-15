@@ -9,6 +9,7 @@
 #include "ast.hpp"
 #include "codegen.hpp"
 #include "semantic.hpp"
+#include "module.hpp"
 
 
 using namespace azin;
@@ -350,7 +351,7 @@ int main(int argc, char** argv)
 #endif
 
         // =========================
-        // READ MAIN FILE
+        // READ FILE
         // =========================
 
         std::cout << "Reading file: " << sourcePath << "\n";
@@ -361,10 +362,10 @@ int main(int argc, char** argv)
         std::cout << "File size: " << source.size() << " bytes\n";
 
         // =========================
-        // LEXER (MAIN)
+        // LEXER
         // =========================
 
-        std::cout << "\n--- Starting Lexical Analysis (MAIN) ---\n";
+        std::cout << "\n--- Starting Lexical Analysis ---\n";
 
         Lexer lexer(source);
         auto tokens = lexer.tokenize();
@@ -375,84 +376,21 @@ int main(int argc, char** argv)
         dumpTokens(tokens);
 
         // =========================
-        // PARSER (MAIN)
+        // PARSER
         // =========================
 
-        std::cout << "\n--- Starting Parsing (MAIN) ---\n";
+        std::cout << "\n--- Starting Parsing ---\n";
 
-        Parser parser(tokens);
-        Program program = parser.parse();
+        ModuleLoader loader;
+        Program program = loader.loadProgramWithModules(sourcePath);
+
 
         std::cout << "Parsing completed successfully.\n";
 
-
         // =========================
-        // MERGE !use MODULES INTO AST
-        // =========================
-
-        std::vector<TopLevelDecl> mergedDecls = std::move(program.decls);
-        std::vector<std::string> extraCFiles;
-
-        for (size_t i = 0; i < mergedDecls.size(); ++i)
-        {
-            if (std::holds_alternative<UseDecl>(mergedDecls[i]))
-            {
-                const auto& use = std::get<UseDecl>(mergedDecls[i]);
-
-                std::cout << "\n--- Processing !use: " << use.path << " ---\n";
-
-                std::string usedSource = readFile(use.path);
-                std::cout << "Loaded module: " << use.path << "\n";
-
-                // LEXER
-                Lexer l(usedSource);
-                auto usedTokens = l.tokenize();
-
-                std::cout << "Module tokens: " << usedTokens.size() << "\n";
-                dumpTokens(usedTokens);
-
-                // PARSER
-                Parser p(usedTokens);
-                Program usedProgram = p.parse();
-
-                std::cout << "Module parsed successfully.\n";
-                dumpAST(usedProgram);
-
-                // ===== GENERATE MODULE C FILE FIRST =====
-                std::string moduleBase = removeExtension(use.path);
-                std::string moduleC = moduleBase + ".c";
-
-                std::string moduleCCode = CodegenC::generate(usedProgram);
-
-                std::ofstream outC(moduleC);
-                outC << moduleCCode;
-                outC.close();
-
-                std::cout << "Generated module C file: " << moduleC << "\n";
-
-                std::string command = "gcc " + cFileName;
-
-                for (const auto& mod : extraCFiles)
-                    command += " " + mod;
-
-
-                // ===== NOW MOVE DECLS INTO MAIN AST =====
-                for (auto& d : usedProgram.decls)
-                {
-                    mergedDecls.push_back(std::move(d));
-                }
-            }
-        }
-
-        // Replace program.decls with merged result
-        program.decls = std::move(mergedDecls);
-
-
-        // =========================
-        // AST DUMP (FULL PROGRAM)
+        // AST DUMP
         // =========================
 
-        std::cout << "\n===== FULL MERGED AST =====\n";
         dumpAST(program);
 
         // =========================
@@ -467,10 +405,10 @@ int main(int argc, char** argv)
         std::cout << "Semantic analysis complete.\n";
 
         // =========================
-        // CODEGEN (MAIN FILE)
+        // CODEGEN
         // =========================
 
-        std::cout << "\n--- Starting C Code Generation (MAIN) ---\n";
+        std::cout << "\n--- Starting C Code Generation ---\n";
 
         std::string cCode = CodegenC::generate(program);
 
@@ -481,15 +419,10 @@ int main(int argc, char** argv)
         std::cout << "C source written to " << cFileName << "\n";
 
         // =========================
-        // BUILD GCC COMMAND
+        // BUILD
         // =========================
 
-        std::string command = "gcc " + cFileName;
-
-        for (const auto& mod : extraCFiles)
-            command += " " + mod;
-
-        command += " -o " + exeFileName;
+        std::string command = "gcc " + cFileName + " -o " + exeFileName;
 
         std::cout << "Running: " << command << "\n";
 
@@ -518,3 +451,4 @@ int main(int argc, char** argv)
 
     return 0;
 }
+
