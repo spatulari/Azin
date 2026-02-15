@@ -33,6 +33,8 @@ namespace azin
                 case '-': tokens.push_back(makeToken(TokenType::MINUS)); break;
                 case '*': tokens.push_back(makeToken(TokenType::STAR)); break;
                 case ':': tokens.push_back(makeToken(TokenType::COLON)); break;
+                case '@': tokens.push_back(makeToken(TokenType::AT)); break;
+                case '%': tokens.push_back(makeToken(TokenType::PERCENT)); break;
                 case '/':
                     if (peek() == '/') {
                         skipComment();

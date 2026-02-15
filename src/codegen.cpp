@@ -201,10 +201,14 @@ std::string CodegenC::generateStatement(const Stmt* stmt)
 {
     if (auto ret = dynamic_cast<const ReturnStmt*>(stmt))
     {
+        if (!ret->value)
+            return "return;\n";
+
         return "return " +
-               generateExpression(ret->value.get()) +
-               ";\n";
+            generateExpression(ret->value.get()) +
+            ";\n";
     }
+
 
     if (auto var = dynamic_cast<const VarDeclStmt*>(stmt))
     {
@@ -269,6 +273,27 @@ std::string CodegenC::generateStatement(const Stmt* stmt)
         return generateExpression(exprStmt->expression.get()) + ";\n";
     }
 
+    if (auto wh = dynamic_cast<const WhileStmt*>(stmt))
+    {
+        std::stringstream out;
+
+        out << "while ("
+            << generateExpression(wh->condition.get())
+            << ") {\n";
+
+        increaseIndent();
+
+        for (const auto& s : wh->body->statements)
+            out << indent() << generateStatement(s.get());
+
+        decreaseIndent();
+
+        out << indent() << "}\n";
+
+        return out.str();
+    }
+
+
 
     throw std::runtime_error("Unsupported statement in C codegen");
 }
@@ -280,6 +305,15 @@ std::string CodegenC::generateExpression(const Expr* expr)
 {
     if (auto lit = dynamic_cast<const LiteralExpr*>(expr))
         return lit->value;
+
+
+
+    if (auto unary = dynamic_cast<const UnaryExpr*>(expr))
+    {
+        return "(" + unary->op +
+            generateExpression(unary->operand.get()) +
+            ")";
+    }
 
     if (auto bin = dynamic_cast<const BinaryExpr*>(expr))
     {
@@ -297,7 +331,13 @@ std::string CodegenC::generateExpression(const Expr* expr)
     {
         std::stringstream out;
 
+        if (!call->moduleName.empty())
+        {
+            out << call->moduleName << "__";
+        }
+
         out << call->callee << "(";
+
 
         for (size_t i = 0; i < call->arguments.size(); i++)
         {

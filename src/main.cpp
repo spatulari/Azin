@@ -80,6 +80,7 @@ static const char* tokenTypeToString(TokenType type)
         case TokenType::RBRACE: return "RBRACE";
         case TokenType::SEMICOLON: return "SEMICOLON";
         case TokenType::COMMA: return "COMMA";
+        case TokenType::AT: return "AT";
 
         case TokenType::EQUAL: return "EQUAL";
         case TokenType::PLUS: return "PLUS";

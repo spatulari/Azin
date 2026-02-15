@@ -65,6 +65,8 @@ namespace azin
         AMPERSAND,
         PIPE,
         COLON,
+        AT,
+        PERCENT,
 
 
         // Comparison

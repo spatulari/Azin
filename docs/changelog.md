@@ -2,6 +2,126 @@
 
 ---
 
+## v0.3.0-alpha
+
+## New feutures
+
+- user created libraries
+- printing 
+- std library (has to be downloaded manually)
+- =, ==, >=, <=, >, < operators
+- char* and char array which are the same undercover
+
+### Examples
+
+main.az:
+
+```az
+!use "std.az"
+
+int main()
+{
+    bool verified = false;
+    int age = 19;
+    char buf[20];
+
+    intToString@std(age, buf);
+    out@std("Age: ");
+    out@std(buf);
+
+    if (age >= 18)
+    {
+        verified = true;
+    }
+    else
+    {
+        verified = false;
+    }
+
+    if (verified)
+    {
+        out@std("\nVerified\n");
+    }
+    else
+    {
+        out@std("\nNot verified\n");
+    }
+
+    return 0;
+}
+```
+
+std.az:
+
+```az
+extern i64 write(int fd, char* msg, int count); 
+
+nore intToString(int x, char* buffer)
+{
+    int i = 0;
+    bool isNegative = false;
+
+    if (x == 0)
+    {
+        buffer[i] = '0';
+        i = i + 1;
+        buffer[i] = 0;
+        return;
+    }
+
+    if (x < 0)
+    {
+        isNegative = true;
+        x = -x;   // WARNING: UB on INT_MIN
+    }
+
+    while (x > 0)
+    {
+        int digit = x % 10;
+        buffer[i] = digit + '0';
+        i = i + 1;
+        x = x / 10;
+    }
+
+    if (isNegative)
+    {
+        buffer[i] = '-';
+        i = i + 1;
+    }
+
+    buffer[i] = 0;
+
+    int start = 0;
+    int end = i - 1;
+
+    while (start < end)
+    {
+        char temp = buffer[start];
+        buffer[start] = buffer[end];
+        buffer[end] = temp;
+
+        start = start + 1;
+        end = end - 1;
+    }
+}
+
+int strlen(char* s) {
+    int i = 0;
+
+    while (s[i] != 0) {
+        i = i + 1;
+    }
+
+    return i;
+}
+
+nore out(char* msg)
+{
+    int len = strlen(msg);
+    write(1, msg, len);
+}
+```
+
 ## v0.2.0-alpha
 
 ### BIG CHANGE

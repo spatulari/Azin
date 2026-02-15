@@ -130,6 +130,18 @@ FunctionDecl Parser::parseExtern()
     return fn;
 }
 
+std::unique_ptr<Expr> Parser::parseUnary()
+{
+    if (match(TokenType::MINUS))
+    {
+        std::string op = previous().lexeme;
+        auto operand = parseUnary();  // recursion
+        return std::make_unique<UnaryExpr>(op, std::move(operand));
+    }
+
+    return parsePrimary();
+}
+
 
 // Function Parsing
 
@@ -206,6 +218,10 @@ std::unique_ptr<Stmt> Parser::parseStatement()
     if (match(TokenType::IF))
         return parseIf();
 
+    if (match(TokenType::WHILE))
+        return parseWhile();
+
+
     if (match(TokenType::RETURN))
         return parseReturn();
 
@@ -272,6 +288,7 @@ std::unique_ptr<Stmt> Parser::parseVarDecl()
         arraySize = std::stoi(sizeToken.lexeme);
         consume(TokenType::RBRACKET, "Expected ']'");
         isArray = true;
+        typeToken.isArray = true;
     }
 
     std::unique_ptr<Expr> initializer = nullptr;
@@ -364,6 +381,21 @@ std::unique_ptr<Stmt> Parser::parseIf()
     );
 }
 
+std::unique_ptr<Stmt> Parser::parseWhile()
+{
+    consume(TokenType::LPAREN, "Expected '(' after while");
+
+    auto condition = parseExpression();
+
+    consume(TokenType::RPAREN, "Expected ')' after condition");
+
+    auto body = parseBlock();
+
+    return std::make_unique<WhileStmt>(
+        std::move(condition),
+        std::move(body)
+    );
+}
 
 
 // Expression Parsing
@@ -435,9 +467,9 @@ std::unique_ptr<Expr> Parser::parseTerm()
 
 std::unique_ptr<Expr> Parser::parseFactor()
 {
-    auto left = parsePrimary();
+    auto left = parseUnary();
 
-    while (match(TokenType::STAR) || match(TokenType::SLASH))
+    while (match(TokenType::STAR) || match(TokenType::SLASH) || match(TokenType::PERCENT))
     {
         std::string op = previous().lexeme;
         auto right = parsePrimary();
@@ -468,6 +500,14 @@ std::unique_ptr<Expr> Parser::parsePrimary()
     if (match(TokenType::IDENTIFIER))
     {
         std::string name = previous().lexeme;
+        std::string moduleName = "";
+
+        if (match(TokenType::AT))
+        {
+            Token module = consume(TokenType::IDENTIFIER,
+                "Expected module name after '@'");
+            moduleName = module.lexeme;
+        }
 
         std::unique_ptr<Expr> expr = std::make_unique<VarExpr>(name);
 
@@ -484,7 +524,12 @@ std::unique_ptr<Expr> Parser::parsePrimary()
             }
 
             consume(TokenType::RPAREN, "Expected ')'");
-            expr = std::make_unique<CallExpr>(name, std::move(args));
+
+            expr = std::make_unique<CallExpr>(
+                name,
+                std::move(args),
+                moduleName
+            );
         }
 
         // Array indexing (can chain)

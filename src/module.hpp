@@ -20,6 +20,11 @@ private:
                            std::vector<TopLevelDecl>& mergedDecls);
 
     std::string readFile(const std::string& path);
+
+    
+    void loadFileRecursive(const std::string& path,
+                                        std::vector<TopLevelDecl>& mergedDecls,
+                                        bool isEntry);
 };
 
 }

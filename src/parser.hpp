@@ -42,6 +42,8 @@ namespace azin
         std::unique_ptr<Expr> parseFactor();
         std::unique_ptr<Expr> parseEquality();
         std::unique_ptr<Expr> parseComparison();
+        std::unique_ptr<Stmt> parseWhile();
+        std::unique_ptr<Expr> parseUnary();
         FunctionDecl parseExtern();
 
 

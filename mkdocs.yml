@@ -1,13 +1,28 @@
-site_name: Azin Documentation
+site_name: Azin
+site_description: The Azin Programming Language — Official Documentation
+site_author: Azin Project
+site_url: https://azin-lang.github.io/docs
 
-nav:
-  - Home: index.md
-  - Install: install.md
-  - Change Log: changelog.md
+repo_name: Azin Compiler
+repo_url: https://github.com/spatulari/Azin
+edit_uri: edit/main/docs/
 
 theme:
   name: material
   logo: assets/logo.png
+  favicon: assets/logo.png
+
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.suggest
+
   palette:
     - scheme: default
       primary: blue
@@ -15,7 +30,6 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
-
     - scheme: slate
       primary: blue
       accent: cyan
@@ -23,10 +37,65 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
-  features:
-    - search.highlight
-    - search.share
-    - search.suggest
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - footnotes
+  - codehilite
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.details
+  - pymdownx.tabbed
 
 plugins:
   - search
+
+extra:
+
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Spatulari/Azin
+      name: GitHub Repository
+
+    - icon: fontawesome/brands/tiktok
+      link: https://tiktok.com/@spatulari
+
+  generator: false
+    
+
+copyright: |
+  © 2026 Azin Project. All rights reserved.
+
+nav:
+  - Overview:
+      - Introduction: index.md
+      - Installation: install.md
+      - Change Log: changelog.md
+
+  - Getting Started:
+      - Quickstart: getting-started/quickstart.md
+
+  - Language Reference:
+      - Overview: language/index.md
+      - Types: language/types.md
+      - Variables: language/variables.md
+      - Functions: language/functions.md
+      - Control Flow: language/control-flow.md
+      - Modules: language/modules.md
+
+  - Standard Library:
+      - Overview: std/index.md
+      - IO:
+          - out(): std/io/out.md
+      - Utilities:
+          - intToString(): std/utils/intToString.md
+          - strlen(): std/utils/strlen.md
+
+  - Compiler Internals:
+      - Architecture: internals/architecture.md
+      - Lexer: internals/lexer.md
+      - Parser: internals/parser.md
+      - Semantic Analysis: internals/semantic.md
+      - C Code Generation: internals/codegen.md

@@ -175,12 +175,15 @@ namespace azin
 
     struct CallExpr : Expr
     {
-        std::string callee;
+        std::string callee;        // function name
+        std::string moduleName;    // empty if not qualified
         std::vector<std::unique_ptr<Expr>> arguments;
 
         CallExpr(std::string callee,
-                std::vector<std::unique_ptr<Expr>> args)
+                std::vector<std::unique_ptr<Expr>> args,
+                std::string moduleName = "")
             : callee(std::move(callee)),
+            moduleName(std::move(moduleName)),
             arguments(std::move(args)) {}
     };
 
@@ -223,5 +226,27 @@ namespace azin
     {
         std::vector<TopLevelDecl> decls;
     };
+
+    struct WhileStmt : Stmt
+    {   
+        std::unique_ptr<Expr> condition;
+        std::unique_ptr<BlockStmt> body;
+
+        WhileStmt(std::unique_ptr<Expr> condition,
+                std::unique_ptr<BlockStmt> body)
+            : condition(std::move(condition)),
+            body(std::move(body)) {}
+    };
+
+    struct UnaryExpr : Expr
+    {
+        std::string op;
+        std::unique_ptr<Expr> operand;
+
+        UnaryExpr(const std::string& op,
+                std::unique_ptr<Expr> operand)
+            : op(op), operand(std::move(operand)) {}
+    };
+
 
 }
