@@ -16,12 +16,13 @@ public:
 private:
     std::unordered_set<std::string> loadedModules;
 
-    void loadFileRecursive(const std::string& path,
-                           std::vector<TopLevelDecl>& mergedDecls);
+    // @deprecated
+    // Removed due to ambiguity with the same function in codegen.cpp;
+    // void loadFileRecursive(const std::string& path,
+    //                        std::vector<TopLevelDecl>& mergedDecls);
 
     std::string readFile(const std::string& path);
 
-    
     void loadFileRecursive(const std::string& path,
                                         std::vector<TopLevelDecl>& mergedDecls,
                                         bool isEntry);
