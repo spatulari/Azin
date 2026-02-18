@@ -331,7 +331,14 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
         Symbol* sym = symbols.lookup(var->name);
 
         if (!sym)
-            throw std::runtime_error("Undefined identifier: " + var->name);
+            throw std::runtime_error(
+                "Error at " +
+                var->span.file + ":" +
+                std::to_string(var->span.startLine) + ":" +
+                std::to_string(var->span.startCol) +
+                " -> Undefined identifier: " + var->name
+            );
+
 
         if (sym->kind == SymbolKind::Function)
             throw std::runtime_error("Function used as variable: " + var->name);

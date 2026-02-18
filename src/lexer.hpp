@@ -84,9 +84,10 @@ namespace azin
     struct Token {
         TokenType type;
         std::string lexeme;
-        std::size_t line;
-        std::size_t column;
+        int line;
+        int column;
     };
+
 
     class Lexer {
     public:
@@ -98,8 +99,8 @@ namespace azin
         const std::string source;
 
         std::size_t position = 0;
-        std::size_t line = 1;
-        std::size_t column = 1;
+        int line = 1;   
+        int column = 1;
 
         // Core scanning
         char advance();

@@ -40,14 +40,24 @@ namespace azin
         return os;
     }
 
-
+    struct Span 
+    {
+        std::string file;
+        int startLine;
+        int startCol;
+        int endLine;
+        int endCol;
+    };
     struct Expr
     {
+        Span span;
         virtual ~Expr() = default;
     };
 
+
     struct Stmt
     {
+        Span span;
         virtual ~Stmt() = default;
     };
 
@@ -95,6 +105,7 @@ namespace azin
         std::vector<Param> params;
         std::unique_ptr<BlockStmt> body;
         bool isExtern = false;
+        Span span;
     };
 
 
@@ -148,6 +159,7 @@ namespace azin
 
 
 
+
     struct IfStmt : Stmt
     {
         std::unique_ptr<Expr> condition;
@@ -197,6 +209,8 @@ namespace azin
             : expression(std::move(expr)) {}
     };
 
+
+
     struct StringExpr : Expr
     {
         std::string value;
@@ -218,6 +232,7 @@ namespace azin
     struct UseDecl
     {
         std::string path;
+        Span span;  
     };
 
     using TopLevelDecl = std::variant<FunctionDecl, UseDecl>;

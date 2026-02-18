@@ -12,7 +12,7 @@ namespace azin
     class Parser
     {
     public:
-        explicit Parser(const std::vector<Token>& tokens);
+        explicit Parser(const std::vector<Token>& tokens, const std::string& file);
 
         Program parse();
 
@@ -49,6 +49,7 @@ namespace azin
 
         // ====== Other =====
         std::string currentFunctionReturnType;
+        std::string currentFile;
         UseDecl parseUse();
 
         

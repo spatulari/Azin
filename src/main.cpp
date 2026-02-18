@@ -332,7 +332,6 @@ int main(int argc, char** argv)
     std::streambuf* cerrBuf = std::cerr.rdbuf();
 
     std::cout.rdbuf(debugFile.rdbuf());
-    std::cerr.rdbuf(debugFile.rdbuf());
 
     std::cout << "===== AZC DEBUG SESSION START =====\n";
 
@@ -436,13 +435,19 @@ int main(int argc, char** argv)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "\n!!! EXCEPTION CAUGHT !!!\n";
+        // Full debug info to log
+        std::cout << "\n!!! EXCEPTION CAUGHT !!!\n";
+        std::cout << e.what() << "\n";
+
+        // Clean message to user
         std::cerr << e.what() << "\n";
     }
     catch (...)
     {
-        std::cerr << "\n!!! UNKNOWN CRITICAL ERROR !!!\n";
+        std::cout << "\n!!! UNKNOWN CRITICAL ERROR !!!\n";
+        std::cerr << "Unknown critical error\n";
     }
+
 
     std::cout << "\n===== AZC DEBUG SESSION END =====\n";
 

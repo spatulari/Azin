@@ -196,7 +196,7 @@ void ModuleLoader::loadFileRecursive(const std::string& path,
     Lexer lexer(source);
     auto tokens = lexer.tokenize();
 
-    Parser parser(tokens);
+    Parser parser(tokens, path);
     Program program = parser.parse();
 
     // Extract module name from filename (use filesystem to handle paths reliably)

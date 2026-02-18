@@ -6,8 +6,8 @@ namespace azin
 
 // Constructor
 
-Parser::Parser(const std::vector<Token>& tokens)
-    : tokens(tokens) {}
+Parser::Parser(const std::vector<Token>& tokens, const std::string& file)
+    : tokens(tokens), currentFile(file) {}
 
 
 // Entry Point
@@ -23,6 +23,30 @@ Program Parser::parse()
 
     return program;
 }
+
+Span makeSpan(const Span& start, const Span& end)
+{
+    return Span{
+        start.file,
+        start.startLine,
+        start.startCol,
+        end.endLine,
+        end.endCol
+    };
+}
+
+Span makeSpan(const Token& start, const Token& end, const std::string& file)
+{
+    return Span{
+        file,
+        (int)start.line,
+        (int)start.column,
+        (int)end.line,
+        (int)end.column
+    };
+}
+
+
 
 // Top-Level Parsing
 
@@ -134,19 +158,31 @@ std::unique_ptr<Expr> Parser::parseUnary()
 {
     if (match(TokenType::MINUS))
     {
-        std::string op = previous().lexeme;
-        auto operand = parseUnary();  // recursion
-        return std::make_unique<UnaryExpr>(op, std::move(operand));
+        Token opToken = previous();
+        auto operand = parseUnary();
+
+        auto node = std::make_unique<UnaryExpr>(
+            opToken.lexeme,
+            std::move(operand)
+        );
+
+        Span start = makeSpan(opToken, opToken, currentFile);
+        node->span = makeSpan(start, node->operand->span);
+
+
+        return node;
     }
 
     return parsePrimary();
 }
 
 
+
 // Function Parsing
 
 FunctionDecl Parser::parseFunction()
 {
+    Token startToken = peek();
     if (match(TokenType::EXTERN))
         return parseExtern();
 
@@ -183,13 +219,18 @@ FunctionDecl Parser::parseFunction()
 
 
     auto body = parseBlock();
-    return FunctionDecl{
+    Token endToken = previous();
+    FunctionDecl fn
+    {
         returnType,
         name.lexeme,
         std::move(params),
         std::move(body)
     };
 
+    fn.span = makeSpan(startToken, endToken, currentFile);
+
+    return fn;
 }
 
 // Block Parsing
@@ -276,6 +317,7 @@ std::unique_ptr<Stmt> Parser::parseExpressionStatement()
 
 std::unique_ptr<Stmt> Parser::parseVarDecl()
 {
+    Token startToken = peek();
     Type typeToken = parseType();
     Token name = consume(TokenType::IDENTIFIER, "Expected variable name");
 
@@ -301,7 +343,8 @@ std::unique_ptr<Stmt> Parser::parseVarDecl()
 
     consume(TokenType::SEMICOLON, "Expected ';' after variable declaration");
 
-    return std::make_unique<VarDeclStmt>(
+    Token endToken = previous();
+    auto node = std::make_unique<VarDeclStmt>(
         typeToken,
         name.lexeme,
         std::move(initializer),
@@ -309,6 +352,8 @@ std::unique_ptr<Stmt> Parser::parseVarDecl()
         arraySize
     );
 
+    node->span = makeSpan(startToken, endToken, currentFile);
+    return node;
 }
 
 
@@ -334,14 +379,18 @@ std::unique_ptr<Stmt> Parser::parseAssignment()
 
 std::unique_ptr<ReturnStmt> Parser::parseReturn()
 {
+    Token startToken = previous();  // because RETURN already matched
     if (check(TokenType::SEMICOLON))
     {
         consume(TokenType::SEMICOLON, "Expected ';'");
+        Token endToken = previous();
         return std::make_unique<ReturnStmt>(nullptr);
     }
 
     auto value = parseExpression();
     consume(TokenType::SEMICOLON, "Expected ';' after return value");
+    Token endToken = previous();
+
 
     if (currentFunctionReturnType == "nore")
     {
@@ -354,13 +403,16 @@ std::unique_ptr<ReturnStmt> Parser::parseReturn()
             throw error("Non-nore function must return a value");
     }
 
+    auto node = std::make_unique<ReturnStmt>(std::move(value));
+    node->span = makeSpan(startToken, endToken, currentFile);
+    return node;
 
-    return std::make_unique<ReturnStmt>(std::move(value));
 }
-
 
 std::unique_ptr<Stmt> Parser::parseIf()
 {
+    Token startToken = previous(); // IF
+
     consume(TokenType::LPAREN, "Expected '(' after if");
     auto condition = parseExpression();
     consume(TokenType::RPAREN, "Expected ')' after condition");
@@ -370,32 +422,42 @@ std::unique_ptr<Stmt> Parser::parseIf()
     std::unique_ptr<BlockStmt> elseBranch = nullptr;
 
     if (match(TokenType::ELSE))
-    {
         elseBranch = parseBlock();
-    }
 
-    return std::make_unique<IfStmt>(
+    Token endToken = previous();
+
+    auto node = std::make_unique<IfStmt>(
         std::move(condition),
         std::move(thenBranch),
         std::move(elseBranch)
     );
+
+    node->span = makeSpan(startToken, endToken, currentFile);
+    return node;
 }
+
 
 std::unique_ptr<Stmt> Parser::parseWhile()
 {
+    Token startToken = previous(); // WHILE
+
     consume(TokenType::LPAREN, "Expected '(' after while");
 
     auto condition = parseExpression();
-
     consume(TokenType::RPAREN, "Expected ')' after condition");
 
     auto body = parseBlock();
+    Token endToken = previous();
 
-    return std::make_unique<WhileStmt>(
+    auto node = std::make_unique<WhileStmt>(
         std::move(condition),
         std::move(body)
     );
+
+    node->span = makeSpan(startToken, endToken, currentFile);
+    return node;
 }
+
 
 
 // Expression Parsing
@@ -414,11 +476,24 @@ std::unique_ptr<Expr> Parser::parseEquality()
         std::string op = previous().lexeme;
         auto right = parseComparison();
 
-        left = std::make_unique<BinaryExpr>(
+        Token opToken = previous();
+
+        auto node = std::make_unique<BinaryExpr>(
             std::move(left),
             op,
             std::move(right)
         );
+
+        node->span = makeSpan(
+            node->left->span,
+            node->right->span
+        );
+
+
+
+
+        left = std::move(node);
+
     }
 
     return left;
@@ -434,11 +509,23 @@ std::unique_ptr<Expr> Parser::parseComparison()
         std::string op = previous().lexeme;
         auto right = parseTerm();
 
-        left = std::make_unique<BinaryExpr>(    
+        Token opToken = previous();
+
+        auto node = std::make_unique<BinaryExpr>(
             std::move(left),
             op,
             std::move(right)
         );
+
+        node->span = makeSpan(
+            node->left->span,
+            node->right->span
+        );
+
+
+
+        left = std::move(node);
+
     }
 
     return left;
@@ -455,11 +542,22 @@ std::unique_ptr<Expr> Parser::parseTerm()
         std::string op = previous().lexeme;
         auto right = parseFactor();
 
-        left = std::make_unique<BinaryExpr>(
+        Token opToken = previous();
+
+        auto node = std::make_unique<BinaryExpr>(
             std::move(left),
             op,
             std::move(right)
         );
+
+        node->span = makeSpan(
+            node->left->span,
+            node->right->span
+        );
+
+
+        left = std::move(node);
+
     }
 
     return left;
@@ -474,11 +572,22 @@ std::unique_ptr<Expr> Parser::parseFactor()
         std::string op = previous().lexeme;
         auto right = parsePrimary();
 
-        left = std::make_unique<BinaryExpr>(
+        Token opToken = previous();
+
+        auto node = std::make_unique<BinaryExpr>(
             std::move(left),
             op,
             std::move(right)
         );
+
+        node->span = makeSpan(
+            node->left->span,
+            node->right->span
+        );
+
+
+        left = std::move(node);
+
     }
 
     return left;
@@ -487,7 +596,14 @@ std::unique_ptr<Expr> Parser::parseFactor()
 std::unique_ptr<Expr> Parser::parsePrimary()
 {
     if (match(TokenType::NUMBER))
-        return std::make_unique<LiteralExpr>(previous().lexeme);
+    {
+        Token tok = previous();
+        auto node = std::make_unique<LiteralExpr>(tok.lexeme);
+        node->span = makeSpan(tok, tok, currentFile);
+        return node;
+    }
+
+
 
 
     if (match(TokenType::TRUE))
@@ -499,7 +615,8 @@ std::unique_ptr<Expr> Parser::parsePrimary()
 
     if (match(TokenType::IDENTIFIER))
     {
-        std::string name = previous().lexeme;
+        Token idTok = previous();
+        std::string name = idTok.lexeme;
         std::string moduleName = "";
 
         if (match(TokenType::AT))
@@ -509,11 +626,16 @@ std::unique_ptr<Expr> Parser::parsePrimary()
             moduleName = module.lexeme;
         }
 
-        std::unique_ptr<Expr> expr = std::make_unique<VarExpr>(name);
+        std::unique_ptr<Expr> expr =
+            std::make_unique<VarExpr>(name);
+
+        expr->span = makeSpan(idTok, idTok, currentFile);
 
         // Function call
         if (match(TokenType::LPAREN))
         {
+            Token startToken = idTok;
+
             std::vector<std::unique_ptr<Expr>> args;
 
             if (!check(TokenType::RPAREN))
@@ -524,24 +646,41 @@ std::unique_ptr<Expr> Parser::parsePrimary()
             }
 
             consume(TokenType::RPAREN, "Expected ')'");
+            Token endToken = previous();
 
-            expr = std::make_unique<CallExpr>(
+            auto callNode = std::make_unique<CallExpr>(
                 name,
                 std::move(args),
                 moduleName
             );
+
+            callNode->span = makeSpan(startToken, endToken, currentFile);
+            expr = std::move(callNode);
         }
 
-        // Array indexing (can chain)
+        // Array indexing
         while (match(TokenType::LBRACKET))
         {
             auto index = parseExpression();
             consume(TokenType::RBRACKET, "Expected ']'");
-            expr = std::make_unique<IndexExpr>(std::move(expr), std::move(index));
+            
+            auto indexNode = std::make_unique<IndexExpr>(
+                std::move(expr),
+                std::move(index)
+            );
+
+            indexNode->span = makeSpan(
+                indexNode->base->span,
+                indexNode->index->span
+            );
+
+            expr = std::move(indexNode);
         }
+
 
         return expr;
     }
+
 
     if (match(TokenType::LPAREN))
     {
@@ -648,10 +787,13 @@ Token Parser::consume(TokenType type, const std::string& message)
 std::runtime_error Parser::error(const std::string& message) const
 {
     return std::runtime_error(
-        "Parser error at line " +
-        std::to_string(peek().line) +
-        ": " + message
+        "Parser error at " +
+        currentFile + ":" +
+        std::to_string(peek().line) + ":" +
+        std::to_string(peek().column) +
+        " -> " + message
     );
 }
+
 
 }

@@ -196,8 +196,14 @@ namespace azin
     }
 
     Token Lexer::makeToken(TokenType type) {
-        return Token{type, std::string(1, source[position - 1]), line, column};
+        return Token{
+            type,
+            std::string(1, source[position - 1]),
+            line,
+            column - 1   // start position
+        };
     }
+
 
     Token Lexer::makeToken(TokenType type, const std::string& lexeme) {
         return Token{type, lexeme, line, column};
@@ -205,6 +211,8 @@ namespace azin
 
     Token Lexer::identifier() {
         std::size_t start = position;
+        int startLine = line;
+        int startCol = column;
 
         while (!isAtEnd() &&
               (std::isalnum(peek()) || peek() == '_')) {
@@ -214,18 +222,20 @@ namespace azin
         std::string text = source.substr(start, position - start);
         TokenType type = resolveKeyword(text);
 
-        return Token{type, text, line, column};
+       return Token{type, text, startLine, startCol};
     }
 
     Token Lexer::number() {
         std::size_t start = position;
+        int startLine = line;
+        int startCol = column;
 
         while (!isAtEnd() && std::isdigit(peek())) {
             advance();
         }
 
         std::string text = source.substr(start, position - start);
-        return Token{TokenType::NUMBER, text, line, column};
+        return Token{TokenType::NUMBER, text, startLine, startCol};
     }
 
     TokenType Lexer::resolveKeyword(const std::string& text) {
@@ -266,6 +276,8 @@ namespace azin
     Token Lexer::string()
     {
         std::size_t start = position;
+        int startLine = line;
+        int startCol = column;
 
         while (!isAtEnd() && peek() != '"')
         {
@@ -278,7 +290,7 @@ namespace azin
         std::string text = source.substr(start, position - start);
         advance(); // consume closing "
 
-        return Token{TokenType::STRING, text, line, column};
+        return Token{TokenType::STRING, text, startLine, startCol};
     }
 
     Token Lexer::charLiteral()
@@ -291,7 +303,16 @@ namespace azin
         if (!match('\''))
             return makeToken(TokenType::UNKNOWN);
 
-        return Token{TokenType::CHAR_LITERAL, std::string(1, value), line, column};
+        int startLine = line;
+        int startCol = column - 1;
+
+        return Token{
+            TokenType::CHAR_LITERAL,
+            std::string(1, value),
+            startLine,
+            startCol
+        };
+
     }
 
 
