@@ -51,10 +51,7 @@ namespace azin
         std::string currentFunctionReturnType;
         std::string currentFile;
         UseDecl parseUse();
-
-        
-
-
+        bool isType(TokenType type);
 
         // ===== Utilities =====
         const Token& peek() const;

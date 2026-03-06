@@ -1,2 +1,1 @@
-# This is only for linux
-cd src && g++ *.cpp -o ../azc && cd .. 
+cd src && g++ main.cpp lexer.cpp parser.cpp semantic.cpp codegen.cpp module.cpp -o ../azc && cd .. 

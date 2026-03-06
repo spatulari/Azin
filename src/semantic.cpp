@@ -9,6 +9,20 @@ void SymbolTable::enterScope() {
     scopes.emplace_back();
 }
 
+bool isInteger(const Type& t)
+{
+    return t.base == "char" ||
+           t.base == "int"  ||
+           t.base == "i8"   ||
+           t.base == "i16"  ||
+           t.base == "i32"  ||
+           t.base == "i64"  ||
+           t.base == "u8"   ||
+           t.base == "u16"  ||
+           t.base == "u32"  ||
+           t.base == "u64";
+}
+
 void SymbolTable::exitScope() {
     scopes.pop_back();
 }
@@ -37,17 +51,28 @@ Symbol* SymbolTable::lookup(const std::string& name) {
 
 bool SemanticAnalyzer::areTypesCompatible(const Type& from, const Type& to)
 {
-    // Exact match
-    if (from == to)
+    // exact match
+    if (from == to) return true;
+
+    // pointer depth + base match (e.g. int* == int*)
+    if (from.pointerDepth == to.pointerDepth &&
+        from.base == to.base &&
+        from.isArray == to.isArray)
         return true;
 
-    // Allow int → u64 / i64
-    if (from.base == "int" &&
-        (to.base == "u64" || to.base == "i64"))
+    // array -> pointer decay (char[] -> char*)
+    if (from.isArray &&
+        to.pointerDepth > 0 &&
+        from.base == to.base)
         return true;
 
-    if ((from.base == "char" && to.base == "int") ||
-        (from.base == "int" && to.base == "char"))
+    // integer conversions
+    if (from.pointerDepth == 0 && to.pointerDepth == 0 &&
+        isInteger(from) && isInteger(to))
+        return true;
+
+    // pointer → integer (like uintptr_t)
+    if (from.pointerDepth > 0 && isInteger(to))
         return true;
 
     return false;
@@ -176,10 +201,12 @@ void SemanticAnalyzer::analyzeStatement(Stmt* stmt)
 
         Type initType = analyzeExpression(var->initializer.get());
 
-        if (initType != var->type)
-            if (initType.base == "int" && var->type.base == "char")
+        if (!areTypesCompatible(initType, var->type))
+        {
+            // special-case: int -> char conversion allowed for literals or arithmetic
+            if (initType.pointerDepth == 0 && var->type.pointerDepth == 0 &&
+                initType.base == "int" && var->type.base == "char")
             {
-                // Allow arithmetic expressions
                 if (dynamic_cast<BinaryExpr*>(var->initializer.get()))
                 {
                     // OK
@@ -195,10 +222,11 @@ void SemanticAnalyzer::analyzeStatement(Stmt* stmt)
                     throw std::runtime_error("Unsafe int to char conversion");
                 }
             }
-            else if (initType != var->type)
+            else
             {
                 throw std::runtime_error("Type mismatch in variable declaration");
             }
+        }
 
 
         Symbol sym;
@@ -300,7 +328,23 @@ void SemanticAnalyzer::analyzeStatement(Stmt* stmt)
 
 Type SemanticAnalyzer::analyzeExpression(Expr* expr)
 {
-    // ===== LITERAL =====
+    if (auto addr = dynamic_cast<AddressOfExpr*>(expr))
+    {
+        Type inner = analyzeExpression(addr->target.get());
+        inner.pointerDepth += 1;
+        inner.isArray = false;
+        return inner;
+    }
+    if (auto deref = dynamic_cast<DerefExpr*>(expr))
+    {
+        Type inner = analyzeExpression(deref->target.get());
+
+        if (inner.pointerDepth == 0)
+            throw std::runtime_error("Cannot dereference non-pointer");
+
+        inner.pointerDepth -= 1;
+        return inner;
+    }
     if (auto lit = dynamic_cast<LiteralExpr*>(expr))
     {
         Type t;
@@ -323,6 +367,15 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
         // default: number → int
         t.base = "int";
         return t;
+    }
+
+    if (auto cast = dynamic_cast<CastExpr*>(expr))
+    {
+        // Analyze inner expression but do not restrict it
+        analyzeExpression(cast->expr.get());
+
+        // allow any explicit cast
+        return cast->targetType;
     }
 
     // ===== VARIABLE =====
@@ -368,6 +421,7 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
         if (call->arguments.size() != sym->paramTypes.size())
             throw std::runtime_error("Incorrect argument count in call to: " + call->callee);
 
+
         for (size_t i = 0; i < call->arguments.size(); ++i)
         {
             Type argType = analyzeExpression(call->arguments[i].get());
@@ -379,7 +433,7 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
                 // exact match
             }
             else if (argType.isArray &&
-                    paramType.isPointer &&
+                    paramType.pointerDepth > 0 &&
                     argType.base == paramType.base)
             {
                 // array decays to pointer
@@ -403,12 +457,10 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
 
         if (unary->op == "-")
         {
-            if (operandType.base != "int")
-                throw std::runtime_error("Unary minus only supported on int");
+            if (!isInteger(operandType))
+                throw std::runtime_error("Unary minus only supported on integers");
 
-            Type t;
-            t.base = "int";
-            return t;
+            return operandType;
         }
 
         throw std::runtime_error("Unknown unary operator: " + unary->op);
@@ -422,7 +474,9 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
         Type rightType = analyzeExpression(bin->right.get());
 
         if (!areTypesCompatible(leftType, rightType))
-            throw std::runtime_error("Type mismatch in binary expression");
+            throw std::runtime_error(
+                "Type mismatch: " + leftType.base + " vs " + rightType.base
+            );
 
 
         // Comparison operators → bool
@@ -435,28 +489,43 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
             return t;
         }
 
+        if (leftType.pointerDepth > 0 &&
+            rightType.base == "int" &&
+            rightType.pointerDepth == 0)
+        {
+            return leftType;
+        }
+
+        if (leftType.pointerDepth > 0 &&
+            rightType.pointerDepth > 0 &&
+            leftType.base == rightType.base &&
+            bin->op == "-")
+        {
+            return Type{"int", 0, false};
+        }
+        
+
         // Arithmetic → int only
         if (bin->op == "+" || bin->op == "-" ||
             bin->op == "*" || bin->op == "/" ||
             bin->op == "%")
         {
-            if (leftType.base != "int" && leftType.base != "char")
-                throw std::runtime_error("Arithmetic only supported on int/char");
+            if (!isInteger(leftType))
+                throw std::runtime_error("Arithmetic only supported on integers");
 
-            Type t;
-            t.base = "int";
-            return t;
+            return leftType;
         }
 
         throw std::runtime_error("Unknown binary operator: " + bin->op);
     }
+    
 
     // ===== STRING LITERAL =====
     if (auto str = dynamic_cast<StringExpr*>(expr))
     {
         Type t;
         t.base = "char";
-        t.isPointer = true;  // string = char*
+        t.pointerDepth = 1;  // string = char*
         return t;
     }
 
@@ -465,7 +534,7 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
     {
         Type baseType = analyzeExpression(index->base.get());
 
-        if (!baseType.isPointer && !baseType.isArray)
+        if (baseType.pointerDepth == 0 && !baseType.isArray)
             throw std::runtime_error("Indexing non-array variable");
 
 
@@ -475,7 +544,8 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
             throw std::runtime_error("Array index must be int");
 
         Type elementType = baseType;
-        elementType.isPointer = false;  // char* → char
+        if (elementType.pointerDepth > 0)
+            elementType.pointerDepth--;  
         elementType.isArray = false;
         return elementType;
 
@@ -483,8 +553,6 @@ Type SemanticAnalyzer::analyzeExpression(Expr* expr)
 
     throw std::runtime_error("Unknown expression in semantic analysis");
 }
-
-
 
 
 }

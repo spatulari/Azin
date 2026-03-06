@@ -1,0 +1,10 @@
+!use "std.az"
+
+int main() {
+    int x = 5;
+    int* y = &x;
+
+    out@std(&y);
+
+    return 0;
+}

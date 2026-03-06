@@ -88,7 +88,7 @@ std::string CodegenC::mapTypeToC(const Type& type)
     else
         throw std::runtime_error("Unknown type: " + type.base);
 
-    if (type.isPointer)
+    for (int i = 0; i < type.pointerDepth; i++)
         base += "*";
 
     return base;
@@ -303,10 +303,23 @@ std::string CodegenC::generateStatement(const Stmt* stmt)
 
 std::string CodegenC::generateExpression(const Expr* expr)
 {
+    if (auto addr = dynamic_cast<const AddressOfExpr*>(expr))
+    {
+        return "&" + generateExpression(addr->target.get());
+    }
+    if (auto deref = dynamic_cast<const DerefExpr*>(expr))
+    {
+        return "*" + generateExpression(deref->target.get());
+    }
+
+    if (auto cast = dynamic_cast<const CastExpr*>(expr))
+    {
+        return "(" + mapTypeToC(cast->targetType) + ")"
+            + generateExpression(cast->expr.get());
+    }
+
     if (auto lit = dynamic_cast<const LiteralExpr*>(expr))
         return lit->value;
-
-
 
     if (auto unary = dynamic_cast<const UnaryExpr*>(expr))
     {
@@ -329,6 +342,30 @@ std::string CodegenC::generateExpression(const Expr* expr)
     }
     if (auto call = dynamic_cast<const CallExpr*>(expr))
     {
+        if (call->callee == "out" && call->arguments.size() == 1)
+        {
+            const Expr* arg = call->arguments[0].get();
+
+            if (dynamic_cast<const StringExpr*>(arg))
+            {
+                return "std__out(" + generateExpression(arg) + ")";
+            }
+
+            if (dynamic_cast<const AddressOfExpr*>(arg))
+            {
+                return "std__outPtr((int64_t)" + generateExpression(arg) + ")";
+            }
+            
+            if (dynamic_cast<const LiteralExpr*>(arg))
+            {
+                return "std__outInt(" + generateExpression(arg) + ")";
+            }
+
+            if (dynamic_cast<const VarExpr*>(arg))
+            {
+                return "std__outInt(" + generateExpression(arg) + ")";
+            }
+        }
         std::stringstream out;
 
         if (!call->moduleName.empty())

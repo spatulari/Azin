@@ -1,0 +1,142 @@
+extern i64 write(int fd, char* msg, int count);
+
+nore intToString(i64 x, char* buffer)
+{
+    int i = 0;
+    bool isNegative = false;
+
+    if (x == 0)
+    {
+        buffer[i] = '0';    
+        i = i + 1;
+        buffer[i] = 0;
+        return;
+    }
+
+    if (x < 0)
+    {
+        isNegative = true;
+        x = -x;   
+    }
+
+    while (x > 0)
+    {
+        int digit = x % 10;
+        buffer[i] = digit + '0';
+        i = i + 1;
+        x = x / 10;
+    }
+
+    if (isNegative)
+    {
+        buffer[i] = '-';
+        i = i + 1;
+    }
+
+    buffer[i] = 0;
+
+    int start = 0;
+    int end = i - 1;
+
+    while (start < end)
+    {
+        char temp = buffer[start];
+        buffer[start] = buffer[end];
+        buffer[end] = temp;
+
+        start = start + 1;
+        end = end - 1;
+    }
+}
+
+
+
+
+int strlen(char* s) {
+    int i = 0;
+
+    while (s[i] != 0) {
+        i = i + 1;
+    }
+
+    return i;
+}
+
+
+nore out(char* msg)
+{
+    int len = strlen(msg);
+    write(1, msg, len);
+}
+
+int ptrToInt(int* value)
+{
+    return *value;
+}
+
+nore intToHexString(i64 value, char* buffer)
+{
+    char* hexDigits = "0123456789ABCDEF";
+
+    int i = 0;
+
+    buffer[i] = '0';
+    i = i + 1;
+
+    buffer[i] = 'x';
+    i = i + 1;
+
+    bool started = false;
+
+    i64 divisor = 1152921504606846976; // 2^60
+
+    while (divisor > 0)
+    {
+        int digit = (value / divisor) % 16;
+
+        bool shouldPrint = false;
+
+        if (digit != 0)
+        {
+            shouldPrint = true;
+        }
+
+        if (started)
+        {
+            shouldPrint = true;
+        }
+
+        if (divisor == 1)
+        {
+            shouldPrint = true;
+        }
+
+        if (shouldPrint)
+        {
+            started = true;
+            buffer[i] = hexDigits[digit];
+            i = i + 1;
+        }
+
+        divisor = divisor / 16;
+    }
+
+    buffer[i] = 0;
+}
+
+nore outPtr(i64 ptr)
+{
+    char buffer[32];
+
+    intToHexString(ptr, buffer);
+    out(buffer);
+}
+
+nore outInt(int value)
+{
+    char buffer[32];
+
+    intToString(value, buffer);
+    out(buffer);
+}
+

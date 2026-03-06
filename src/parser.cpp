@@ -93,7 +93,7 @@ Type Parser::parseType()
 
     // handle pointers
     while (match(TokenType::STAR))
-        t.isPointer = true;
+        t.pointerDepth++;
 
     return t;
 }
@@ -106,7 +106,21 @@ UseDecl Parser::parseUse()
     return UseDecl{ path.lexeme };
 }
 
-
+bool Parser::isType(TokenType type)
+{
+    return type == TokenType::TYPE_INT  ||
+           type == TokenType::TYPE_I8   ||
+           type == TokenType::TYPE_I16  ||
+           type == TokenType::TYPE_I32  ||
+           type == TokenType::TYPE_I64  ||
+           type == TokenType::TYPE_U8   ||
+           type == TokenType::TYPE_U16  ||
+           type == TokenType::TYPE_U32  ||
+           type == TokenType::TYPE_U64  ||
+           type == TokenType::TYPE_BOOL ||
+           type == TokenType::TYPE_CHAR ||
+           type == TokenType::TYPE_NORE;
+}
 
 FunctionDecl Parser::parseExtern()
 {
@@ -132,7 +146,7 @@ FunctionDecl Parser::parseExtern()
             }
 
             if (isArray)
-                type.isPointer = true;
+                type.pointerDepth++;
 
             params.push_back({ type, name.lexeme });
 
@@ -156,21 +170,41 @@ FunctionDecl Parser::parseExtern()
 
 std::unique_ptr<Expr> Parser::parseUnary()
 {
+        if (match(TokenType::LPAREN))
+    {
+        if (isType(peek().type))
+        {
+            Type type = parseType();
+            consume(TokenType::RPAREN, "Expected ')' after type");
+
+            auto expr = parseUnary();
+            return std::make_unique<CastExpr>(type, std::move(expr));
+        }
+
+        // not a cast → rewind
+        current--;
+    }
     if (match(TokenType::MINUS))
     {
         Token opToken = previous();
         auto operand = parseUnary();
 
-        auto node = std::make_unique<UnaryExpr>(
+        return std::make_unique<UnaryExpr>(
             opToken.lexeme,
             std::move(operand)
         );
+    }
 
-        Span start = makeSpan(opToken, opToken, currentFile);
-        node->span = makeSpan(start, node->operand->span);
+    if (match(TokenType::AMPERSAND))
+    {
+        auto operand = parseUnary();
+        return std::make_unique<AddressOfExpr>(std::move(operand));
+    }
 
-
-        return node;
+    if (match(TokenType::STAR))
+    {
+        auto operand = parseUnary();
+        return std::make_unique<DerefExpr>(std::move(operand));
     }
 
     return parsePrimary();
@@ -206,7 +240,7 @@ FunctionDecl Parser::parseFunction()
             if (match(TokenType::LBRACKET))
             {
                 consume(TokenType::RBRACKET, "Expected ']'");
-                type.isPointer = true;
+                type.pointerDepth++;
             }
 
             params.push_back({ type, name.lexeme });
@@ -282,25 +316,22 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         return parseVarDecl();
     }
 
-    if (check(TokenType::IDENTIFIER))
+    // Handle generic expression statements and assignments
+    auto expr = parseExpression();
+
+    if (match(TokenType::EQUAL))
     {
-        auto expr = parseExpression();
-
-        if (match(TokenType::EQUAL))
-        {
-            auto value = parseExpression();
-            consume(TokenType::SEMICOLON, "Expected ';'");
-
-            return std::make_unique<AssignmentStmt>(
-                std::move(expr),
-                std::move(value)
-            );
-        }
-
+        auto value = parseExpression();
         consume(TokenType::SEMICOLON, "Expected ';'");
-        return std::make_unique<ExpressionStmt>(std::move(expr));
+
+        return std::make_unique<AssignmentStmt>(
+            std::move(expr),
+            std::move(value)
+        );
     }
 
+    consume(TokenType::SEMICOLON, "Expected ';'");
+    return std::make_unique<ExpressionStmt>(std::move(expr));
 
 
     throw error("Unknown statement");
@@ -570,7 +601,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     while (match(TokenType::STAR) || match(TokenType::SLASH) || match(TokenType::PERCENT))
     {
         std::string op = previous().lexeme;
-        auto right = parsePrimary();
+        auto right = parseUnary();   // ✅ FIXED
 
         Token opToken = previous();
 
@@ -585,14 +616,11 @@ std::unique_ptr<Expr> Parser::parseFactor()
             node->right->span
         );
 
-
         left = std::move(node);
-
     }
 
     return left;
 }
-
 std::unique_ptr<Expr> Parser::parsePrimary()
 {
     if (match(TokenType::NUMBER))

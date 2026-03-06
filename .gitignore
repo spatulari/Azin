@@ -1,6 +1,5 @@
 *.c
 *.exe
-*.az
 *.log
 azc
 test

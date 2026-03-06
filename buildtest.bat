@@ -1,0 +1,1 @@
+cd src && g++ test_syntax.cpp lexer.cpp parser.cpp semantic.cpp codegen.cpp module.cpp -o ../azctest.exe && cd .. 

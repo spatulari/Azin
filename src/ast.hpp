@@ -11,13 +11,13 @@ namespace azin
     struct Type
     {
         std::string base;   // "int", "char", etc
-        bool isPointer = false;
+        int pointerDepth = 0;
         bool isArray = false;
 
         bool operator==(const Type& other) const
         {
             return base == other.base &&
-                isPointer == other.isPointer &&
+                pointerDepth == other.pointerDepth &&
                 isArray == other.isArray;
         }
 
@@ -31,8 +31,8 @@ namespace azin
     {
         os << t.base;
 
-        if (t.isPointer)
-            os << "*";
+    for (int i = 0; i < t.pointerDepth; i++)
+        os << "*";
 
         if (t.isArray)
             os << "[]";
@@ -121,6 +121,14 @@ namespace azin
                 std::unique_ptr<Expr> right)
             : left(std::move(left)), op(op), right(std::move(right)) {}
     };
+    struct CastExpr : Expr
+{
+    Type targetType;
+    std::unique_ptr<Expr> expr;
+
+    CastExpr(Type type, std::unique_ptr<Expr> expr)
+        : targetType(type), expr(std::move(expr)) {}
+};
 
     struct VarDeclStmt : Stmt
     {
@@ -261,6 +269,21 @@ namespace azin
         UnaryExpr(const std::string& op,
                 std::unique_ptr<Expr> operand)
             : op(op), operand(std::move(operand)) {}
+    };
+    struct AddressOfExpr : Expr
+    {
+        std::unique_ptr<Expr> target;
+
+        explicit AddressOfExpr(std::unique_ptr<Expr> target)
+            : target(std::move(target)) {}
+    };
+
+    struct DerefExpr : Expr
+    {
+        std::unique_ptr<Expr> target;
+
+        explicit DerefExpr(std::unique_ptr<Expr> target)
+            : target(std::move(target)) {}
     };
 
 

@@ -14,6 +14,8 @@
 
 using namespace azin;
 
+
+
 #include <filesystem>
 
 std::string removeExtension(const std::string& filename)
@@ -344,11 +346,14 @@ int main(int argc, char** argv)
         std::string baseName = removeExtension(sourcePath);
         std::string cFileName = baseName + ".c";
 
-#ifdef _WIN32
-        std::string exeFileName = baseName + ".exe";
-#else
-        std::string exeFileName = baseName;
-#endif
+        #ifdef _WIN32
+                bool windows = true;
+                std::string exeFileName = baseName + ".exe";
+        #else
+                std::string exeFileName = baseName;
+        #endif
+
+
 
         // =========================
         // READ FILE
@@ -366,7 +371,6 @@ int main(int argc, char** argv)
         // =========================
 
         std::cout << "\n--- Starting Lexical Analysis ---\n";
-
         Lexer lexer(source);
         auto tokens = lexer.tokenize();
 
@@ -431,7 +435,11 @@ int main(int argc, char** argv)
         if (result != 0)
             throw std::runtime_error("GCC compilation failed.");
 
+        std::string delCommand = "rm ";
         std::cout << "Compilation successful: " << exeFileName << "\n";
+        if (windows) {delCommand = "del ";}
+        std::string cleanCommand = delCommand + "*.c";
+        //std::system(cleanCommand.c_str());  
     }
     catch (const std::exception& e)
     {
@@ -457,4 +465,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-
